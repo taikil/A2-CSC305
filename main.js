@@ -27,8 +27,8 @@ var ambientColor, diffuseColor, specularColor;
 
 var modelMatrix, viewMatrix, modelViewMatrix, projectionMatrix, normalMatrix;
 var modelViewMatrixLoc, projectionMatrixLoc, normalMatrixLoc;
-var eye;
-var at = vec3(0.0, 0.0, 0.0);
+var eye = [0, 0, 10];
+var at = [0, 0, 10];
 var at = vec3(0.0, 0.0, 0.0);
 var up = vec3(0.0, 1.0, 0.0);
 
@@ -47,18 +47,37 @@ var controller;
 // These are used to store the current state of objects.
 // In animation it is often useful to think of an object as having some DOF
 // Then the animation is simply evolving those DOF over time.
+var currentScene = 1;
+
+//Scene 1
 var currentRotation = [0, 0, 0];
 var bouncingCubePosition = [0, 4, 0];
 var bouncyBallVelocity = 0;
 var bouncyEnergyLoss = 0.9;
-var gravity = -9.8;
+var gravity = 9.8;
 
 var diverColour = vec4(0.639, 0.071, 0.62, 1);
-var diverPosition = [1, 1, 0];
+
 var diverArmRotation = [0, 0, 0];
+var diverLegRotation = [0, 0, 0];
+var jumpPosition = [0, 0, 0];
+
+var armsUp = false;
+
+var diverVelocity = 0;
+var diverRotation = [0, 0, 0];
+var diverPosition = [1, 1, 0];
 var diverHeadPosition = [0, 1.15, 0];
 var diverArmPostion = [0.55, 0.0, 0];
 var diverThighPosition = [0.3, -1, 0];
+var diverLegCompression = [30, 0, 0];
+var cloud1Position = [-1, 4.8, -15];
+var cloud2Position = [-3.5, 3.5, -15];
+var cloud3Position = [2, 3, -15];
+
+// Scene 2
+var fishMovement = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+var fishPosition = [-7, 5, 10];
 
 var blendTextures = 0;
 
@@ -428,7 +447,6 @@ function gPush() {
 function render(timestamp) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  eye = vec3(0, 5, 10);
   MS = []; // Initialize modeling matrix stack
 
   // initialize the modeling matrix to identity
@@ -467,19 +485,43 @@ function render(timestamp) {
   gl.bindTexture(gl.TEXTURE_2D, textureArray[1].textureWebGL);
   gl.uniform1i(gl.getUniformLocation(program, "texture2"), 1);
 
-  // gl.activeTexture(gl.TEXTURE2);
-  // gl.bindTexture(gl.TEXTURE_2D, textureArray[2].textureWebGL);
-  // gl.uniform1i(gl.getUniformLocation(program, "texture3"), 1);
-
   // Now let's draw a shape animated!
   // You may be wondering where the texture coordinates are!
   // We've modified the object.js to add in support for this attribute array!
   gPush();
   {
+    if (timestamp < 16000) {
+      // if (timestamp > 160000) {
+      scene1();
+      console.log(timestamp);
+      if (timestamp > 12000) {
+        nextScene(eye);
+      }
+    }
+    if (timestamp > 16000) {
+      eye = [0, 0, 15];
+      at = [0, 0, 0];
+
+      //Fishes
+      for (var i = 0; i < 11; i++) {
+        var sign;
+        i % 2 == 0 ? (sign = 1) : (sign = -1);
+        renderFishes(i, sign);
+      }
+    }
+  }
+  gPop();
+
+  if (animFlag) window.requestAnimFrame(render);
+
+  function scene1() {
     renderWater();
 
     //Diver
     renderDiver(timestamp);
+    renderCloud(cloud1Position);
+    renderCloud(cloud2Position);
+    renderCloud(cloud3Position);
 
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, textureArray[2].textureWebGL);
@@ -490,34 +532,97 @@ function render(timestamp) {
     gl.uniform1i(gl.getUniformLocation(program, "texture3"), 1);
 
     renderDock();
+    if (timestamp > 3000 && timestamp < 8000) {
+      moveCamera(eye, timestamp);
+    }
+    if (timestamp > 8000 && timestamp < 12000) {
+      // animateSwimming(timestamp);
+      jump(timestamp);
+    }
+  }
+  // if isLeft, the x coordinate and sway angles are negative
+}
+
+function renderFishes(i, sign) {
+  gPush();
+  {
+    sign == 1
+      ? setColor(vec4(0.0, 0.0, 1.0, 1.0))
+      : setColor(vec4(1.0, 0.0, 0.0, 1.0));
+    gTranslate(fishPosition[0] * sign, fishPosition[1] - i, fishPosition[2]);
+    fishMovement[i] += dt * (1 + i / 5) * sign;
+    gTranslate(fishMovement[i], 0, 0);
+    if (i % 2 == 1) {
+      gRotate(180, 0, 1, 0);
+    }
+    if (sign == 1) {
+      if (fishPosition[0] + fishMovement[i] > 7) {
+        gTranslate(-fishMovement[i], 0, 0);
+        fishMovement[i] = 0;
+      }
+    } else {
+      if (fishMovement[i] - fishPosition[0] < -7) {
+        gTranslate(-fishMovement[i], 0, 0);
+        fishMovement[i] = 0;
+      }
+    }
+    gPush();
+    {
+      gScale(0.333, 0.1, 0.1);
+      drawSphere();
+    }
+    gPop();
+    gPush();
+    {
+      gTranslate(-0.333, 0, 0);
+      gScale(0.1, 0.2, 0.1);
+      gRotate(90, 0, 1, 0);
+      drawCone();
+    }
+    gPop();
+    gPush();
+    {
+      setColor(vec4(0.0, 1.0, 1.0, 1.0));
+      gTranslate(0.25, 0, 0.1);
+      gScale(0.05, 0.05, 0.05);
+      drawSphere();
+    }
+    gPop();
+    gPush();
+    {
+      setColor(vec4(1.0, 1.0, 0.0, 1.0));
+      gTranslate(0.25, 0, -0.1);
+      gScale(0.05, 0.05, 0.05);
+      drawSphere();
+    }
+    gPop();
   }
   gPop();
+}
 
-  //Make a bouncy sphere
-  //   setColor(vec4(1.0, 0.0, 0.5, 1.0));
-  //   gPush();
-  //   {
-  //     //Note simplified velocity and acceleration ehre are just scalars, normally they are vectors in 3D
-  //     bouncyBallVelocity += gravity * dt; // Update velocity using acceleration
-  //     bouncingCubePosition[1] += bouncyBallVelocity * dt; // Update position using velocity
-  //     // Check if ball hits an imaginary plane at y = 0, and also if the velocity is INTO the plane, and if it is moving at all
-  //     if (bouncingCubePosition[1] < 0 && bouncyBallVelocity < 0) {
-  //       bouncyBallVelocity = -bouncyEnergyLoss * bouncyBallVelocity; // If so, reflect the velocity back but lose some energy.
-  //       bouncingCubePosition[1] = 0; // Ball has most likely penetrated surface because we take discrete time steps, move back to cylinder surface
-  //     }
-  //     // gTranslate(
-  //     //   bouncingCubePosition[0],
-  //     //   bouncingCubePosition[1],
-  //     //   bouncingCubePosition[2]
-  //     // ); // Move the ball to its update position
-  //     // gRotate(-currentRotation[2], 1, 0, 0); // Makes the ball rotate opposite way of cylinder (looks like it is rolling on top if you texture it
-  //     drawSphere();
-  //   }
-  //   gPop();
+function nextScene(eye) {
+  if (eye[1] > -15) {
+    eye[1] -= dt * 4;
+    at[1] -= dt * 4;
+  } else {
+    console.log("DONE");
+  }
+}
 
-  if (animFlag) window.requestAnimFrame(render);
-
-  // if isLeft, the x coordinate and sway angles are negative
+function moveCamera(eye, timestamp) {
+  if (eye[1] < 2) {
+    eye[1] += dt * 2;
+    cloud1Position[1] -= dt * 2;
+    cloud2Position[1] -= dt * 2;
+    cloud3Position[1] -= dt * 2;
+  } else {
+    if (timestamp < 10000) {
+      eye[0] = 10 * Math.cos(0.001 * timestamp);
+      eye[2] = 10 * Math.sin(0.001 * timestamp);
+    } else {
+      eye = [0, 2, 10];
+    }
+  }
 }
 function renderWater() {
   gPush();
@@ -540,6 +645,32 @@ function renderWater() {
   gPop();
 }
 
+function renderCloud(position) {
+  gPush();
+  {
+    setColor(vec4(1.0, 1.0, 1.0, 1.0));
+    gTranslate(position[0], position[1], position[2]);
+    position[0] += dt * 0.1;
+    gScale(0.6, 0.6, 0.6);
+    drawSphere();
+    gPush();
+    {
+      gTranslate(1, -0.1, 0);
+      gScale(0.8, 0.8, 0.8);
+      drawSphere();
+    }
+    gPop();
+    gPush();
+    {
+      gTranslate(-1, -0.1, 0);
+      gScale(0.8, 0.8, 0.8);
+      drawSphere();
+    }
+    gPop();
+  }
+  gPop();
+}
+
 function renderDiver(timestamp) {
   gPush();
   {
@@ -548,7 +679,8 @@ function renderDiver(timestamp) {
     // diverMovement[0] = 0.5 * Math.sin(0.0005 * timestamp); // Left and right movement
     // diverMovement[1] = 0.5 * Math.sin(0.0005 * timestamp); // Up and down movement
     // gTranslate(diverMovement[0], diverMovement[1], diverMovement[2]);
-    gRotate(-30, 0, 1, 0);
+    gRotate(-80, 0, 1, 0);
+    gRotate(diverRotation[0], 1, 0, 0);
     gPush();
     {
       gScale(0.4, 0.8, 0.5);
@@ -560,8 +692,8 @@ function renderDiver(timestamp) {
     renderDiverArms(timestamp, true);
 
     //Diver Leg
-    renderDiverLeg(false);
-    renderDiverLeg(true);
+    renderDiverLeg(timestamp, false);
+    renderDiverLeg(timestamp, true);
 
     // Diver Head
     gPush();
@@ -589,13 +721,33 @@ function animateSwimming(timestamp) {
   diverArmRotation[0] = Math.abs(75 * Math.sin(timestamp / 1000));
 }
 
+function jump(timestamp) {
+  diverLegCompression[0] = 15;
+  if (diverPosition[0] > -3.5) {
+    diverPosition[0] -= dt * 3;
+    diverRotation[0] += dt * 120;
+  }
+  if (diverPosition[1] > 2) {
+    gravity = -9.8;
+  }
+  diverVelocity += dt * gravity;
+  diverPosition[1] += dt * diverVelocity;
+  if (!armsUp) {
+    diverArmRotation[2] += dt * 150;
+  }
+  if (diverArmRotation[2] <= 190) {
+    armsUp = false;
+  } else {
+    armsUp = true;
+  }
+}
+
 function renderDiverArms(timestamp, isLeft) {
   gPush();
   {
     if (isLeft) {
       gTranslate(0.55, 0.0, 0);
       gTranslate(0, 0.6, 0);
-      console.log(diverArmRotation[2]);
       gRotate(diverArmRotation[2], 0, 0, 1);
       gRotate(-diverArmRotation[0], 1, 0, 0);
       gTranslate(0, -0.6, 0);
@@ -616,7 +768,7 @@ function renderDiverArms(timestamp, isLeft) {
   gPop();
 }
 
-function renderDiverLeg(isLeft) {
+function renderDiverLeg(timestamp, isLeft) {
   gPush();
   {
     // Set to left leg position or right leg
@@ -633,12 +785,12 @@ function renderDiverLeg(isLeft) {
         diverThighPosition[2]
       );
     }
-    //   gRotate(45, 1, 0, 0);
-    //Rotate legs alternating in a sine pattern
-    //   legSway[0] = isLeft
-    //     ? -15 * Math.sin(0.002 * timestamp)
-    //     : 15 * Math.sin(0.002 * timestamp); // leg kicking
-    //   gRotate(legSway[0], 1, 0, 0);
+    // gRotate(45, 1, 0, 0);
+    // Rotate legs alternating in a sine pattern
+    diverLegRotation[0] = isLeft
+      ? -15 * Math.sin(0.002 * timestamp)
+      : 15 * Math.sin(0.002 * timestamp); // leg kicking
+    // gRotate(diverLegRotation[0], 1, 0, 0);
     gPush();
     {
       gScale(0.1, 0.5, 0.2);
@@ -650,8 +802,8 @@ function renderDiverLeg(isLeft) {
     {
       // Rotate from base
       gTranslate(0, -0.375, 0);
-      // gRotate(30, 1, 0, 0);
-      // gRotate(0.3 * legSway[0], 1, 0, 0);
+      gRotate(diverLegCompression[0], 1, 0, 0);
+      // gRotate(0.3 * diverLegRotation[0], 1, 0, 0);
       gTranslate(0, -0.375, 0);
       gScale(0.1, 0.4, 0.2);
       drawCube();
@@ -689,3 +841,25 @@ function renderDock() {
   }
   gPop();
 }
+
+//Make a bouncy sphere
+//   setColor(vec4(1.0, 0.0, 0.5, 1.0));
+//   gPush();
+//   {
+//     //Note simplified velocity and acceleration ehre are just scalars, normally they are vectors in 3D
+//     bouncyBallVelocity += gravity * dt; // Update velocity using acceleration
+//     bouncingCubePosition[1] += bouncyBallVelocity * dt; // Update position using velocity
+//     // Check if ball hits an imaginary plane at y = 0, and also if the velocity is INTO the plane, and if it is moving at all
+//     if (bouncingCubePosition[1] < 0 && bouncyBallVelocity < 0) {
+//       bouncyBallVelocity = -bouncyEnergyLoss * bouncyBallVelocity; // If so, reflect the velocity back but lose some energy.
+//       bouncingCubePosition[1] = 0; // Ball has most likely penetrated surface because we take discrete time steps, move back to cylinder surface
+//     }
+//     // gTranslate(
+//     //   bouncingCubePosition[0],
+//     //   bouncingCubePosition[1],
+//     //   bouncingCubePosition[2]
+//     // ); // Move the ball to its update position
+//     // gRotate(-currentRotation[2], 1, 0, 0); // Makes the ball rotate opposite way of cylinder (looks like it is rolling on top if you texture it
+//     drawSphere();
+//   }
+//   gPop();
