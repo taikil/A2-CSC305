@@ -30,18 +30,19 @@
 
             vec3 L = vec3(normalize(lightPosition.xyz-pos)) ;
             vec3 V = normalize(-pos.xyz) ;
-            vec3 R = reflect(-L, N) ;
+            // Calculate half-vector H
+            vec3 H = normalize(L + V);
+            //vec3 R = reflect(-L, N) ;
 
 
-            // Compute terms in the illumination equation
-            float lightDotNormal = max( dot(L, N), 0.0 );
-            vec4 diffuse = vec4(0.0, 0.0, 0.0, 1.0);
-            diffuse = diffuseProduct * lightDotNormal;
+           // Compute terms in the illumination equation
+          float lightDotNormal = max(dot(L, N), 0.0);
+          vec4 diffuse = diffuseProduct * lightDotNormal;
 
+          float specularDotNormal = max(dot(N, H), 0.0);
+          float reflectedDotViewShiny = pow(specularDotNormal, shininess);
+          vec4 specular = specularProduct * reflectedDotViewShiny;
 
-            float reflectedDotViewShiny = pow( max(dot(R, V), 0.0), shininess );
-        	vec4 specular = vec4(0.0, 0.0, 0.0, 1.0);
-            specular = specularProduct * reflectedDotViewShiny;
 
             if( dot(L, N) < 0.0 ) {
                 specular = vec4(0.0, 0.0, 0.0, 1.0);

@@ -27,7 +27,7 @@ var ambientColor, diffuseColor, specularColor;
 
 var modelMatrix, viewMatrix, modelViewMatrix, projectionMatrix, normalMatrix;
 var modelViewMatrixLoc, projectionMatrixLoc, normalMatrixLoc;
-var eye = [0, 0, 10];
+var eye = vec3(0, 0, 10);
 var at = [0, 0, 10];
 var at = vec3(0.0, 0.0, 0.0);
 var up = vec3(0.0, 1.0, 0.0);
@@ -77,7 +77,7 @@ var cloud3Position = [2, 3, -15];
 
 // Scene 2
 var fishMovement = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-var fishPosition = [-7, 5, 10];
+var fishPosition = [-7, 5, -10];
 
 var blendTextures = 0;
 
@@ -499,7 +499,7 @@ function render(timestamp) {
       }
     }
     if (timestamp > 16000) {
-      eye = [0, 0, 15];
+      eye = vec3(0, 0, 10);
       at = [0, 0, 0];
 
       //Fishes
