@@ -740,31 +740,3 @@ function inverseTranspose(m) {
 
   return Inverse;
 }
-
-function ads(pos, lpos, N) {
-  var L = normalize(subtract(lpos, pos));
-  var V = normalize(vec4(0.0, 0.0, 0.0, 1.0).subtract(pos));
-  var H = normalize(add(L, V));
-  //   var H = normalize(L + V);
-  var ambientProduct = vec4(0.2, 0.2, 0.2, 1.0); // Ambient reflection
-  var diffuseProduct = vec4(1.0, 1.0, 1.0, 1.0); // Diffuse reflection
-  var specularProduct = vec4(1.0, 1.0, 1.0, 1.0); // Specular reflection
-  var shininess = 32.0; // Shininess coefficient
-
-  // Compute terms in the illumination equation
-  var lightDotNormal = Math.max(dot(L, N), 0.0);
-  var diffuse = mult(diffuseProduct, lightDotNormal);
-
-  var reflectedDotViewShiny = pow(max(dot(R, V), 0.0), shininess);
-  var specular = vec4(0.0, 0.0, 0.0, 1.0);
-  var specular = specularProduct * reflectedDotViewShiny;
-
-  if (dot(L, N) < 0.0) {
-    specular = vec4(0.0, 0.0, 0.0, 1.0);
-  }
-
-  var color = add(add(ambientProduct, diffuse), specular);
-  color[3] = 1.0;
-
-  return color;
-}

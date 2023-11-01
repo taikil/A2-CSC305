@@ -21,7 +21,7 @@ var lightSpecular = vec4(1.0, 1.0, 1.0, 1.0);
 var materialAmbient = vec4(1.0, 0.0, 1.0, 1.0);
 var materialDiffuse = vec4(1.0, 0.8, 0.0, 1.0);
 var materialSpecular = vec4(0.4, 0.4, 0.4, 1.0);
-var materialShininess = 30.0;
+var materialShininess = 32.0;
 
 var ambientColor, diffuseColor, specularColor;
 
@@ -525,11 +525,11 @@ function render(timestamp) {
 
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, textureArray[2].textureWebGL);
-    gl.uniform1i(gl.getUniformLocation(program, "texture3"), 0);
+    gl.uniform1i(gl.getUniformLocation(program, "texture3"), 1);
 
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, textureArray[2].textureWebGL);
-    gl.uniform1i(gl.getUniformLocation(program, "texture3"), 1);
+    gl.uniform1i(gl.getUniformLocation(program, "texture3"), 2);
 
     renderDock();
     if (timestamp > 3000 && timestamp < 8000) {
@@ -634,9 +634,9 @@ function renderWater() {
     gPush();
     {
       gScale(25, 2, 25);
-      toggleTextureBlending();
+      // toggleTextureBlending();
       drawCube();
-      toggleTextureBlending();
+      // toggleTextureBlending();
     }
     gPop();
 
