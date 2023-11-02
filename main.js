@@ -11,15 +11,15 @@ var right = 6.0;
 var ytop = 6.0;
 var bottom = -6.0;
 
-var lightPosition2 = vec4(100.0, 100.0, 100.0, 1.0);
-var lightPosition = vec4(0.0, 0.0, 100.0, 1.0);
+var lightPosition = vec4(100.0, 100.0, 100.0, 1.0);
+// var lightPosition = vec4(0.0, 0.0, -100.0, 1.0);
 
 var lightAmbient = vec4(0.2, 0.2, 0.2, 1.0);
 var lightDiffuse = vec4(1.0, 1.0, 1.0, 1.0);
 var lightSpecular = vec4(1.0, 1.0, 1.0, 1.0);
 
 var materialAmbient = vec4(1.0, 0.0, 1.0, 1.0);
-var materialDiffuse = vec4(1.0, 0.8, 0.0, 1.0);
+var materialDiffuse = vec4(1.0, 0.8, 1.0, 1.0);
 var materialSpecular = vec4(0.4, 0.4, 0.4, 1.0);
 var materialShininess = 32.0;
 
@@ -28,7 +28,6 @@ var ambientColor, diffuseColor, specularColor;
 var modelMatrix, viewMatrix, modelViewMatrix, projectionMatrix, normalMatrix;
 var modelViewMatrixLoc, projectionMatrixLoc, normalMatrixLoc;
 var eye = vec3(0, 0, 10);
-var at = [0, 0, 10];
 var at = vec3(0.0, 0.0, 0.0);
 var up = vec3(0.0, 1.0, 0.0);
 
@@ -104,7 +103,7 @@ function setColor(c) {
   );
   gl.uniform4fv(
     gl.getUniformLocation(program, "lightPosition"),
-    flatten(lightPosition2)
+    flatten(lightPosition)
   );
   gl.uniform1f(gl.getUniformLocation(program, "shininess"), materialShininess);
 }
@@ -500,7 +499,7 @@ function render(timestamp) {
     }
     if (timestamp > 16000) {
       eye = vec3(0, 0, 10);
-      at = [0, 0, 0];
+      at = vec3(0, 0, 0);
 
       //Fishes
       for (var i = 0; i < 11; i++) {
@@ -620,7 +619,7 @@ function moveCamera(eye, timestamp) {
       eye[0] = 10 * Math.cos(0.001 * timestamp);
       eye[2] = 10 * Math.sin(0.001 * timestamp);
     } else {
-      eye = [0, 2, 10];
+      eye = vec3(0, 2, 10);
     }
   }
 }
@@ -634,9 +633,9 @@ function renderWater() {
     gPush();
     {
       gScale(25, 2, 25);
-      // toggleTextureBlending();
+      toggleTextureBlending();
       drawCube();
-      // toggleTextureBlending();
+      toggleTextureBlending();
     }
     gPop();
 
