@@ -12,7 +12,8 @@ var ytop = 6.0;
 var bottom = -6.0;
 
 var lightPosition = vec4(100.0, 100.0, 100.0, 1.0);
-// var lightPosition = vec4(0.0, 0.0, -100.0, 1.0);
+// var lightPosition2 = vec4(0.0, -100.0, 0.0, 1.0);
+var lightPosition2 = vec4(0.0, 0.0, 0.0, 1.0);
 
 var lightAmbient = vec4(0.2, 0.2, 0.2, 1.0);
 var lightDiffuse = vec4(1.0, 1.0, 1.0, 1.0);
@@ -21,7 +22,7 @@ var lightSpecular = vec4(1.0, 1.0, 1.0, 1.0);
 var materialAmbient = vec4(1.0, 0.0, 1.0, 1.0);
 var materialDiffuse = vec4(1.0, 0.8, 1.0, 1.0);
 var materialSpecular = vec4(0.4, 0.4, 0.4, 1.0);
-var materialShininess = 32.0;
+var materialShininess = 40.0;
 
 var ambientColor, diffuseColor, specularColor;
 
@@ -65,7 +66,8 @@ var armsUp = false;
 
 var diverVelocity = 0;
 var diverRotation = [0, 0, 0];
-var diverPosition = [1, 1, 0];
+// var diverPosition = [1, 1, 0];
+var diverPosition = [5, 7, 0];
 var diverHeadPosition = [0, 1.15, 0];
 var diverArmPostion = [0.55, 0.0, 0];
 var diverThighPosition = [0.3, -1, 0];
@@ -77,6 +79,11 @@ var cloud3Position = [2, 3, -15];
 // Scene 2
 var fishMovement = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 var fishPosition = [-7, 5, -10];
+var moving = false;
+var tentacleRotation = [0, 0, 0];
+var strandRotation = [0, 0, 0];
+var diverMovement = [0, 0, 0];
+var jellyFishPosition = [0, 0, 0];
 
 var blendTextures = 0;
 
@@ -437,6 +444,11 @@ function gScale(sx, sy, sz) {
 function gPop() {
   modelMatrix = MS.pop();
 }
+function gPopN(n) {
+  for (i = 0; i < n; i++) {
+    gPop();
+  }
+}
 
 // pushes the current modelViewMatrix in the stack MS
 function gPush() {
@@ -489,25 +501,32 @@ function render(timestamp) {
   // We've modified the object.js to add in support for this attribute array!
   gPush();
   {
-    if (timestamp < 16000) {
-      // if (timestamp > 160000) {
+    gPop();
+    // if (timestamp < 16000) {
+    if (timestamp > 160000) {
       scene1();
       console.log(timestamp);
-      if (timestamp > 12000) {
+      if (timestamp > 12000 && timestamp < 16000) {
         nextScene(eye);
       }
     }
-    if (timestamp > 16000) {
-      eye = vec3(0, 0, 10);
-      at = vec3(0, 0, 0);
-
-      //Fishes
-      for (var i = 0; i < 11; i++) {
-        var sign;
-        i % 2 == 0 ? (sign = 1) : (sign = -1);
-        renderFishes(i, sign);
-      }
+    // if (timestamp > 16000) {
+    eye = vec3(0, 0, 10);
+    at = vec3(0, 0, 0);
+    lightPosition = lightPosition2;
+    currentScene = 2;
+    //Fishes
+    for (var i = 0; i < 11; i++) {
+      var sign;
+      i % 2 == 0 ? (sign = 1) : (sign = -1);
+      renderFishes(i, sign);
     }
+    if (timestamp > 2000) {
+      renderDiver();
+      animateSwimming(timestamp);
+    }
+    renderJellyFish(timestamp);
+    // }
   }
   gPop();
 
@@ -517,7 +536,7 @@ function render(timestamp) {
     renderWater();
 
     //Diver
-    renderDiver(timestamp);
+    renderDiver();
     renderCloud(cloud1Position);
     renderCloud(cloud2Position);
     renderCloud(cloud3Position);
@@ -535,19 +554,76 @@ function render(timestamp) {
       moveCamera(eye, timestamp);
     }
     if (timestamp > 8000 && timestamp < 12000) {
-      // animateSwimming(timestamp);
-      jump(timestamp);
+      jump();
     }
   }
   // if isLeft, the x coordinate and sway angles are negative
+}
+
+function renderJellyFish(timestamp) {
+  gPush();
+  {
+    setColor(vec4(0, 0.788, 1, 1.0));
+    gRotate(180, 1, 0, 0);
+    gScale(1 + 0.2 * Math.sin(timestamp / 500), 0.5, 1);
+    gPush();
+    {
+      drawSphere();
+    }
+    gPop();
+    for (var i = 1; i <= 36; i++) {
+      gPush();
+      {
+        renderTentacle(-0.6, 0, -0.6, i * 10, timestamp);
+      }
+      gPop();
+    }
+  }
+  gPop();
+}
+
+function renderTentacle(i, j, k, rotation, timestamp) {
+  gPush();
+  {
+    console.log(rotation);
+    gRotate(rotation, 0, 1, 0);
+    gTranslate(i, j, k);
+    // 2.5 degrees * sin(timstamp) -> Translated down the entire kinetic chain equals a sway from -25 to 25 degrees
+    tentacleRotation[2] = -2.5 * Math.sin(timestamp / 1000);
+    gRotate(tentacleRotation[2], 0, 0, 1);
+    gPush();
+    {
+      // gScale(0.15, 0.3, 0.15);
+      gScale(0.075, 0.15, 0.075);
+      drawSphere();
+    }
+    gPop();
+
+    for (i = 0; i < 7; i++) {
+      gPush();
+      //Sine pattern in the seaweed
+      strandRotation[2] = 5 * (Math.sin(timestamp / 500) + 1);
+      gRotate(strandRotation[2], 0, 0, 1);
+      // Rotate from Base
+      gTranslate(0, 0.275, 0);
+      gPush();
+      {
+        gScale(0.075, 0.15, 0.075);
+        drawSphere();
+      }
+      gPop();
+    }
+    gPopN(7);
+  }
+  gPop();
 }
 
 function renderFishes(i, sign) {
   gPush();
   {
     sign == 1
-      ? setColor(vec4(0.0, 0.0, 1.0, 1.0))
-      : setColor(vec4(1.0, 0.0, 0.0, 1.0));
+      ? setColor(vec4(0.2, i / 16.5, 1.0, 1.0))
+      : setColor(vec4(1.0, i / 16.5, 0.2, 1.0));
     gTranslate(fishPosition[0] * sign, fishPosition[1] - i, fishPosition[2]);
     fishMovement[i] += dt * (1 + i / 5) * sign;
     gTranslate(fishMovement[i], 0, 0);
@@ -600,6 +676,8 @@ function renderFishes(i, sign) {
 }
 
 function nextScene(eye) {
+  diverPosition = [5, 7, 0];
+  currentScene++;
   if (eye[1] > -15) {
     eye[1] -= dt * 4;
     at[1] -= dt * 4;
@@ -670,16 +748,17 @@ function renderCloud(position) {
   gPop();
 }
 
-function renderDiver(timestamp) {
+function renderDiver() {
   gPush();
   {
     setColor(diverColour);
     gTranslate(diverPosition[0], diverPosition[1], diverPosition[2]);
-    // diverMovement[0] = 0.5 * Math.sin(0.0005 * timestamp); // Left and right movement
-    // diverMovement[1] = 0.5 * Math.sin(0.0005 * timestamp); // Up and down movement
-    // gTranslate(diverMovement[0], diverMovement[1], diverMovement[2]);
-    gRotate(-80, 0, 1, 0);
+    gTranslate(diverMovement[0], diverMovement[1], diverMovement[2]);
+    if (currentScene == 1) {
+      gRotate(-80, 0, 1, 0);
+    }
     gRotate(diverRotation[0], 1, 0, 0);
+    gRotate(diverRotation[1], 0, 1, 0);
     gPush();
     {
       gScale(0.4, 0.8, 0.5);
@@ -687,12 +766,12 @@ function renderDiver(timestamp) {
     }
     gPop();
 
-    renderDiverArms(timestamp, false);
-    renderDiverArms(timestamp, true);
+    renderDiverArms(false);
+    renderDiverArms(true);
 
     //Diver Leg
-    renderDiverLeg(timestamp, false);
-    renderDiverLeg(timestamp, true);
+    renderDiverLeg(false);
+    renderDiverLeg(true);
 
     // Diver Head
     gPush();
@@ -714,13 +793,45 @@ function renderDiver(timestamp) {
   gPop();
 }
 
-function animateSwimming(timestamp) {
+function animateSwimming(timestamp, moving) {
   // Swimming Arms?
-  diverArmRotation[2] = Math.abs(270 * Math.sin(timestamp / 1000));
-  diverArmRotation[0] = Math.abs(75 * Math.sin(timestamp / 1000));
+  diverRotation[1] = -80;
+  if (diverPosition[1] > 2) {
+    moving = true;
+    diverRotation[0] = 180;
+    diverRotation[2] = 0;
+    diverPosition[1] += -(dt ^ 2) / 25;
+    diverPosition[0] += -(dt ^ 2) / 100;
+  } else {
+    moving = false;
+    rotateDiver(timestamp);
+    diverMovement[0] = 0.3 * Math.sin(timestamp / 1200); // Left and right movement
+    diverMovement[1] = 0.3 * Math.sin(timestamp / 1200); // Up and down movement
+  }
+  if (moving) {
+    diverArmRotation[2] = Math.abs(150 * Math.cos(timestamp / 1000));
+    diverArmRotation[0] = Math.abs(75 * Math.cos(timestamp / 1000));
+  } else {
+    diverArmRotation[2] = Math.abs(75 * Math.sin(timestamp / 1000));
+    diverArmRotation[0] = Math.abs(75 * Math.cos(timestamp / 1000));
+  }
+  moving = false;
+  diverLegRotation[0] = 15 * Math.sin(0.002 * timestamp); // leg kicking
 }
 
-function jump(timestamp) {
+function rotateDiver(timestamp) {
+  if (!moving) {
+    if (diverRotation[0] > 0) {
+      diverRotation[0] -= 2 * Math.abs(Math.cos(timestamp / 1000));
+    }
+  } else {
+    if (diverRotation[0] < 180) {
+      diverRotation[0] += 5 * Math.abs(Math.cos(timestamp / 1000));
+    }
+  }
+}
+
+function jump() {
   diverLegCompression[0] = 15;
   if (diverPosition[0] > -3.5) {
     diverPosition[0] -= dt * 3;
@@ -741,7 +852,7 @@ function jump(timestamp) {
   }
 }
 
-function renderDiverArms(timestamp, isLeft) {
+function renderDiverArms(isLeft) {
   gPush();
   {
     if (isLeft) {
@@ -767,7 +878,7 @@ function renderDiverArms(timestamp, isLeft) {
   gPop();
 }
 
-function renderDiverLeg(timestamp, isLeft) {
+function renderDiverLeg(isLeft) {
   gPush();
   {
     // Set to left leg position or right leg
@@ -786,10 +897,9 @@ function renderDiverLeg(timestamp, isLeft) {
     }
     // gRotate(45, 1, 0, 0);
     // Rotate legs alternating in a sine pattern
-    diverLegRotation[0] = isLeft
-      ? -15 * Math.sin(0.002 * timestamp)
-      : 15 * Math.sin(0.002 * timestamp); // leg kicking
-    // gRotate(diverLegRotation[0], 1, 0, 0);
+    isLeft
+      ? gRotate(-diverLegRotation[0], 1, 0, 0)
+      : gRotate(diverLegRotation[0], 1, 0, 0);
     gPush();
     {
       gScale(0.1, 0.5, 0.2);
