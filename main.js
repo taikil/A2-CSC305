@@ -48,6 +48,7 @@ var controller;
 // In animation it is often useful to think of an object as having some DOF
 // Then the animation is simply evolving those DOF over time.
 var currentScene = 1;
+var testOffset = 16000;
 
 //Scene 1
 var currentRotation = [0, 0, 0];
@@ -66,15 +67,16 @@ var armsUp = false;
 
 var diverVelocity = 0;
 var diverRotation = [0, 0, 0];
-// var diverPosition = [1, 1, 0];
-var diverPosition = [5, 7, 0];
+var diverPosition = [1, 1, 0];
+// var diverPosition = [5, 7, 0];
 var diverHeadPosition = [0, 1.15, 0];
-var diverArmPostion = [0.55, 0.0, 0];
+var diverArmPostion = [0.55, 0.6, 0];
 var diverThighPosition = [0.3, -1, 0];
 var diverLegCompression = [30, 0, 0];
 var cloud1Position = [-1, 4.8, -15];
 var cloud2Position = [-3.5, 3.5, -15];
 var cloud3Position = [2, 3, -15];
+var cloud4Position = [3, 4.8, -15];
 
 // Scene 2
 var fishMovement = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -83,9 +85,47 @@ var moving = false;
 var tentacleRotation = [0, 0, 0];
 var strandRotation = [0, 0, 0];
 var diverMovement = [0, 0, 0];
-var jellyFishPosition = [0, 0, 0];
+var jellyFishPosition = [-9, -9, 0];
+var bubbleTimer = [0, 0, 0, 0];
+var spawnDelay = [0, 0, 0, 0];
+var bubbleMovement = [
+  [0, 0, 0],
+  [0, 0, 0],
+  [0, 0, 0],
+  [0, 0, 0],
+];
+var bubblePosition = [
+  [0, 0, 0],
+  [0, 0, 0],
+  [0, 0, 0],
+  [0, 0, 0],
+];
+sharkPosition = [-10, 0, 1];
+
+// Scene 3
+var fishBodyColour = vec4(0.8, 0.165, 0.11, 1.0);
+var seaweedColour = vec4(0.106, 0.639, 0.141, 1.0);
+var stonePosition = [0, -3.4, 0];
+var stone2Position = [-1.4, -0.5, 0];
+var groundPosition = [0, -1.6, 0];
+
+var s3fishStartPosition = [-2, 1, 0];
+var fishEyePosition = [0.25, 0.25, 0];
+var fishBodyPosition = [0, 0, -1.25];
+var s3fishPosition = [2, 0, 0];
+var fishRotation = [0, 0, 0];
+var s3fishMovement = [1, 0, 1];
+var tailPosition = [0, 0.25, -2.2];
+var tailRotation = [0, 0, 0];
+
+var seaweedRotation = [0, 0, 0];
+var strandRotation = [0, 0, 0];
+var middleSeaweedPosition = [0, 0.8, 0];
+var leftSeaweedPosition = [-0.6, 0.2, 0];
+var rightSeaweedPosition = [0.6, 0.2, 0];
 
 var blendTextures = 0;
+var tint = 0;
 
 // For this example we are going to store a few different textures here
 var textureArray = [];
@@ -202,6 +242,37 @@ function handleTextureLoaded(textureObj) {
 
   textureObj.isTextureReady = true;
 }
+//Jellyfish Texture
+// const textureWidth = 128;
+// const textureHeight = 128;
+
+// // Create a data array for the texture
+// const data = new Array();
+// for (var i = 0; i < textureWidth; i++) data[i] = new Array();
+
+// for (let y = 0; y < textureHeight; y++) {
+//   for (let x = 0; x < textureWidth; x++) {
+//     data[y][x] = new Float32Array(4);
+//   }
+// }
+
+// // Generate the gradient from cyan to white
+// for (let y = 0; y < textureHeight; y++) {
+//   for (let x = 0; x < textureWidth; x++) {
+//     const index = (y * textureWidth + x) * 3;
+//     const gradientValue = x / textureWidth; // Value between 0 and 1 for gradient
+//     data[index] = 0; // Red component (0)
+//     data[index + 1] = 255 * gradientValue; // Green component (cyan to white gradient)
+//     data[index + 2] = 255; // Blue component (255)
+//   }
+// }
+
+// var imageGradient = new Uint8Array(4 * textureHeight * textureWidth);
+
+// for (var i = 0; i < textureHeight; i++)
+//   for (var j = 0; j < textureWidth; j++)
+//     for (var k = 0; k < 4; k++)
+//       imageGradient[4 * textureWidth * i + 4 * j + k] = 255 * data[i][j][k];
 
 // Takes an array of textures and calls render if the textures are created/loaded
 // This is useful if you have a bunch of textures, to ensure that those files are
@@ -302,12 +373,20 @@ function initTexturesForExample() {
 
   textureArray.push({});
   loadFileTexture(textureArray[textureArray.length - 1], "planks.jpg");
+
+  // textureArray.push({});
+  // loadFileTexture(textureArray[textureArray.length - 1], imageGradient);
 }
 
 // Turn texture use on and off
 function toggleTextureBlending() {
   blendTextures = (blendTextures + 1) % 2;
   gl.uniform1i(gl.getUniformLocation(program, "blendTextures"), blendTextures);
+}
+
+function toggleTint(val) {
+  tint = val;
+  gl.uniform1i(gl.getUniformLocation(program, "tint"), tint);
 }
 
 window.onload = function init() {
@@ -319,7 +398,7 @@ window.onload = function init() {
   }
 
   gl.viewport(0, 0, canvas.width, canvas.height);
-  gl.clearColor(0.5, 0.5, 1.0, 1.0);
+  gl.clearColor(0.2, 0.3, 1.0, 1.0);
 
   gl.enable(gl.DEPTH_TEST);
 
@@ -501,46 +580,112 @@ function render(timestamp) {
   // We've modified the object.js to add in support for this attribute array!
   gPush();
   {
-    gPop();
-    // if (timestamp < 16000) {
-    if (timestamp > 160000) {
+    console.log("Timestamp: ", timestamp);
+    if (timestamp < 16000 - testOffset) {
+      // if (timestamp > 160000) {
       scene1();
-      console.log(timestamp);
-      if (timestamp > 12000 && timestamp < 16000) {
-        nextScene(eye);
+      if (timestamp > 12000) {
+        nextScene(2, eye);
       }
     }
-    // if (timestamp > 16000) {
-    eye = vec3(0, 0, 10);
-    at = vec3(0, 0, 0);
-    lightPosition = lightPosition2;
-    currentScene = 2;
+    if (timestamp > 16000 - testOffset && timestamp < 38000 - testOffset) {
+      eye = vec3(0, 0, 10);
+      at = vec3(0, 0, 0);
+      currentScene = 2;
+      scene2();
+    }
+    if (timestamp > 38000 - testOffset) {
+      if (timestamp < 39000 - testOffset) {
+        nextScene(3, eye);
+      }
+      eye = vec3(0, 0, 10);
+      at = vec3(0, 0, 0);
+      scene3(timestamp);
+    }
+  }
+  gPop();
+
+  if (animFlag) window.requestAnimFrame(render);
+
+  function scene2() {
     //Fishes
     for (var i = 0; i < 11; i++) {
       var sign;
       i % 2 == 0 ? (sign = 1) : (sign = -1);
       renderFishes(i, sign);
     }
-    if (timestamp > 2000) {
-      renderDiver();
-      animateSwimming(timestamp);
+    // if (timestamp > 18000) {
+    renderDiver();
+    animateSwimming(timestamp);
+    // Bubbles
+    // Random number between 3 and 6
+    for (i = 0; i < 4; i++) {
+      if (timestamp > spawnDelay[i - 1] + 600 || i == 0) {
+        spawnDelay[i] = timestamp;
+        spawnBubbles(Math.floor(Math.random() * 3) + 4, i, timestamp);
+      }
     }
-    renderJellyFish(timestamp);
     // }
+    renderJellyFish(timestamp);
+    if (timestamp > 30000 - testOffset) {
+      renderShark(timestamp);
+      sharkBite(timestamp);
+    }
   }
-  gPop();
-
-  if (animFlag) window.requestAnimFrame(render);
 
   function scene1() {
     renderWater();
 
     //Diver
     renderDiver();
-    renderCloud(cloud1Position);
-    renderCloud(cloud2Position);
-    renderCloud(cloud3Position);
-
+    renderCloud(
+      cloud1Position,
+      cloud1Position[0],
+      cloud1Position[1],
+      cloud1Position[2]
+    );
+    renderCloud(
+      cloud2Position,
+      cloud2Position[0],
+      cloud2Position[1],
+      cloud2Position[2]
+    );
+    renderCloud(
+      cloud3Position,
+      cloud3Position[0],
+      cloud3Position[1],
+      cloud3Position[2]
+    );
+    renderCloud(
+      cloud4Position,
+      cloud4Position[0],
+      cloud4Position[1],
+      cloud4Position[2]
+    );
+    renderCloud(
+      cloud1Position,
+      2 * cloud1Position[0],
+      cloud1Position[1],
+      -cloud1Position[2]
+    );
+    renderCloud(
+      cloud2Position,
+      cloud2Position[0],
+      cloud2Position[1],
+      -cloud2Position[2]
+    );
+    renderCloud(
+      cloud3Position,
+      2 * cloud3Position[0],
+      cloud3Position[1],
+      -cloud3Position[2]
+    );
+    renderCloud(
+      cloud4Position,
+      cloud4Position[0],
+      cloud4Position[1],
+      -cloud4Position[2]
+    );
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, textureArray[2].textureWebGL);
     gl.uniform1i(gl.getUniformLocation(program, "texture3"), 1);
@@ -557,26 +702,134 @@ function render(timestamp) {
       jump();
     }
   }
-  // if isLeft, the x coordinate and sway angles are negative
+  gPop();
+}
+
+function sharkBite(timestamp) {
+  sharkPosition[0] += 4 * dt;
+  if (sharkPosition[0] + 3 >= diverPosition[0] + diverMovement[0]) {
+    toggleTint(1);
+    diverArmPostion[0] += 7 * dt;
+    // diverArmRotation = [0, 0, 0];
+    diverMovement = [0, 0, 0];
+    if (diverRotation[2] < 180) {
+      diverRotation[2] += dt * 15;
+    }
+    diverPosition[1] -= dt * 2;
+    diverArmPostion[1] += dt * 2;
+  }
+}
+
+function renderShark(timestamp) {
+  gPush();
+  {
+    gTranslate(
+      sharkPosition[0],
+      sharkPosition[1] +
+        diverPosition[1] +
+        diverMovement[1] +
+        diverArmPostion[1],
+      sharkPosition[2]
+    );
+
+    // gRotate(90, 0, 1, 0);
+    //Underbelly
+    gPush();
+    {
+      setColor(vec4(0.8, 0.8, 0.9, 1.0));
+      gTranslate(0, -0.1, 0);
+      gScale(2.8, 0.6, 0.6);
+      drawSphere();
+    }
+    gPop();
+    //Body
+    setColor(vec4(0.427, 0.478, 0.678, 1.0));
+    gPush();
+    {
+      gScale(3, 0.666, 0.666);
+      drawSphere();
+    }
+    gPop();
+    //Tail Fins
+    gPush();
+    {
+      gTranslate(-3.1, 0.5, 0);
+      gRotate(-90, 0, 1, 0);
+      gRotate(-45, 1, 0, 0);
+      gScale(0.1, 0.3, 1.5);
+      drawCone();
+    }
+    gPop();
+    gPush();
+    {
+      gTranslate(-3.1, -0.3, 0);
+      gRotate(-90, 0, 1, 0);
+      gRotate(35, 1, 0, 0);
+      gScale(0.1, 0.3, 1.5);
+      drawCone();
+    }
+    gPop();
+    //Dorsal fin
+    gPush();
+    {
+      gTranslate(0, 1, 0);
+      gRotate(-90, 0, 1, 0);
+      gRotate(-70, 1, 0, 0);
+      gScale(0.01, 0.5, 1.5);
+      drawCone();
+    }
+    gPop();
+    //Front Fin
+    gPush();
+    {
+      gTranslate(1, -1, 1);
+      gRotate(-90, 0, 1, 0);
+      gRotate(89, 1, 0, 0);
+      gScale(0.01, 0.5, 1.5);
+      drawCone();
+    }
+    gPop();
+    //Eye
+    gPush();
+    {
+      setColor(vec4(0.0, 0.0, 0.0, 1.0));
+      gTranslate(2.4, 0.1, 0.3);
+      gScale(0.1, 0.1, 0.1);
+      drawSphere();
+    }
+    gPop();
+  }
+  gPop();
 }
 
 function renderJellyFish(timestamp) {
+  lightPosition = vec4(
+    jellyFishPosition[0],
+    jellyFishPosition[1],
+    jellyFishPosition[2],
+    1.0
+  );
   gPush();
   {
     setColor(vec4(0, 0.788, 1, 1.0));
+    gTranslate(
+      jellyFishPosition[0],
+      jellyFishPosition[1],
+      jellyFishPosition[2]
+    );
+
+    jellyFishPosition[0] += 0.006 * (Math.sin(timestamp / 500) + 1);
+    jellyFishPosition[1] += 0.01 * (Math.sin(timestamp / 500) + 1);
     gRotate(180, 1, 0, 0);
-    gScale(1 + 0.2 * Math.sin(timestamp / 500), 0.5, 1);
+    gRotate(30, 0, 0, 1);
     gPush();
     {
+      gScale(1 + 0.2 * Math.cos(timestamp / 500), 0.5, 1);
       drawSphere();
     }
     gPop();
     for (var i = 1; i <= 36; i++) {
-      gPush();
-      {
-        renderTentacle(-0.6, 0, -0.6, i * 10, timestamp);
-      }
-      gPop();
+      renderTentacle(-0.5, 0, -0.5, i * 10, timestamp);
     }
   }
   gPop();
@@ -585,9 +838,13 @@ function renderJellyFish(timestamp) {
 function renderTentacle(i, j, k, rotation, timestamp) {
   gPush();
   {
-    console.log(rotation);
     gRotate(rotation, 0, 1, 0);
-    gTranslate(i, j, k);
+    //Keep tentacles aligned with jellyfish expanding
+    gTranslate(
+      i - 0.1 * Math.cos(timestamp / 500),
+      j,
+      k - 0.1 * Math.cos(timestamp / 500)
+    );
     // 2.5 degrees * sin(timstamp) -> Translated down the entire kinetic chain equals a sway from -25 to 25 degrees
     tentacleRotation[2] = -2.5 * Math.sin(timestamp / 1000);
     gRotate(tentacleRotation[2], 0, 0, 1);
@@ -602,7 +859,7 @@ function renderTentacle(i, j, k, rotation, timestamp) {
     for (i = 0; i < 7; i++) {
       gPush();
       //Sine pattern in the seaweed
-      strandRotation[2] = 5 * (Math.sin(timestamp / 500) + 1);
+      strandRotation[2] = 5 * (Math.cos(timestamp / 500) + 1);
       gRotate(strandRotation[2], 0, 0, 1);
       // Rotate from Base
       gTranslate(0, 0.275, 0);
@@ -657,7 +914,7 @@ function renderFishes(i, sign) {
     gPop();
     gPush();
     {
-      setColor(vec4(0.0, 1.0, 1.0, 1.0));
+      setColor(vec4(1.0, 1.0, 1.0, 1.0));
       gTranslate(0.25, 0, 0.1);
       gScale(0.05, 0.05, 0.05);
       drawSphere();
@@ -675,23 +932,70 @@ function renderFishes(i, sign) {
   gPop();
 }
 
-function nextScene(eye) {
-  diverPosition = [5, 7, 0];
-  currentScene++;
-  if (eye[1] > -15) {
-    eye[1] -= dt * 4;
-    at[1] -= dt * 4;
-  } else {
-    console.log("DONE");
+function spawnBubbles(dif, i, timestamp) {
+  gPush();
+  {
+    //3-6 seconds before bubble reset
+    if (timestamp > bubbleTimer[i] + dif * 1000 || bubbleTimer[i] == 0) {
+      bubbleTimer[i] = timestamp; // Reset Timer
+      //Reset Position to locate of Diver Head
+      bubbleMovement[i][1] = 0;
+      bubblePosition[i][0] =
+        diverHeadPosition[0] + diverPosition[0] + diverMovement[0];
+      bubblePosition[i][1] =
+        diverHeadPosition[1] + diverPosition[1] + diverMovement[1];
+      bubblePosition[i][2] = diverHeadPosition[2] + diverPosition[2];
+    }
+
+    setColor(vec4(0.99, 0.99, 0.99, 0.8));
+    bubbleMovement[i][1] = bubbleMovement[i][1] + dt; // Upwards Movement
+    gTranslate(
+      bubblePosition[i][0],
+      bubblePosition[i][1],
+      bubblePosition[i][2]
+    );
+    gTranslate(0, bubbleMovement[i][1], 0);
+    gTranslate(0, 0, 0.5);
+    gScale(0.1, 0.1, 0.1);
+    drawSphere();
+  }
+  gPop();
+}
+
+function nextScene(scene, eye) {
+  diverPosition = [5, 8, 0];
+  currentScene == scene;
+  if (scene == 2) {
+    if (eye[1] > -15) {
+      eye[1] -= dt * 4;
+      at[1] -= dt * 4;
+    } else {
+      eye = vec3(0, 0, 10);
+      at = vec3(0, 0, 0);
+      console.log("DONE");
+    }
+  } else if (scene == 3) {
+    diverPosition = [4, 12, 0];
+    diverArmRotation = [0, 0, 0];
+    if (eye[1] > -15) {
+      eye[1] -= dt * 8;
+      at[1] -= dt * 8;
+    } else {
+      eye = vec3(0, 0, 10);
+      at = vec3(0, 0, 0);
+      console.log("DONE");
+    }
   }
 }
 
 function moveCamera(eye, timestamp) {
   if (eye[1] < 2) {
     eye[1] += dt * 2;
+    //Idk I thought it ooked better too keep the clouds in the frame when the camera pans
     cloud1Position[1] -= dt * 2;
     cloud2Position[1] -= dt * 2;
     cloud3Position[1] -= dt * 2;
+    cloud4Position[1] -= dt * 2;
   } else {
     if (timestamp < 10000) {
       eye[0] = 10 * Math.cos(0.001 * timestamp);
@@ -722,25 +1026,40 @@ function renderWater() {
   gPop();
 }
 
-function renderCloud(position) {
+function renderCloud(pos, x, y, z) {
   gPush();
   {
     setColor(vec4(1.0, 1.0, 1.0, 1.0));
-    gTranslate(position[0], position[1], position[2]);
-    position[0] += dt * 0.1;
+    gTranslate(x, y, z);
+    pos[0] += dt * 0.1;
     gScale(0.6, 0.6, 0.6);
     drawSphere();
+
     gPush();
     {
-      gTranslate(1, -0.1, 0);
+      gTranslate(0.666, -0.1, 0);
       gScale(0.8, 0.8, 0.8);
       drawSphere();
     }
     gPop();
     gPush();
     {
-      gTranslate(-1, -0.1, 0);
+      gTranslate(-0.666, -0.1, 0);
       gScale(0.8, 0.8, 0.8);
+      drawSphere();
+    }
+    gPop();
+    gPush();
+    {
+      gTranslate(1.2, -0.25, 0);
+      gScale(0.6, 0.6, 0.6);
+      drawSphere();
+    }
+    gPop();
+    gPush();
+    {
+      gTranslate(-1.2, -0.25, 0);
+      gScale(0.6, 0.6, 0.6);
       drawSphere();
     }
     gPop();
@@ -759,6 +1078,7 @@ function renderDiver() {
     }
     gRotate(diverRotation[0], 1, 0, 0);
     gRotate(diverRotation[1], 0, 1, 0);
+    gRotate(diverRotation[2], 0, 1, 1);
     gPush();
     {
       gScale(0.4, 0.8, 0.5);
@@ -795,11 +1115,10 @@ function renderDiver() {
 
 function animateSwimming(timestamp, moving) {
   // Swimming Arms?
-  diverRotation[1] = -80;
+  // diverRotation[1] = -80;
   if (diverPosition[1] > 2) {
     moving = true;
     diverRotation[0] = 180;
-    diverRotation[2] = 0;
     diverPosition[1] += -(dt ^ 2) / 25;
     diverPosition[0] += -(dt ^ 2) / 100;
   } else {
@@ -823,10 +1142,12 @@ function rotateDiver(timestamp) {
   if (!moving) {
     if (diverRotation[0] > 0) {
       diverRotation[0] -= 2 * Math.abs(Math.cos(timestamp / 1000));
+      diverRotation[1] -= 0.7 * Math.abs(Math.cos(timestamp / 1000));
     }
   } else {
     if (diverRotation[0] < 180) {
       diverRotation[0] += 5 * Math.abs(Math.cos(timestamp / 1000));
+      diverRotation[1] -= 2 * Math.abs(Math.cos(timestamp / 1000));
     }
   }
 }
@@ -856,8 +1177,7 @@ function renderDiverArms(isLeft) {
   gPush();
   {
     if (isLeft) {
-      gTranslate(0.55, 0.0, 0);
-      gTranslate(0, 0.6, 0);
+      gTranslate(diverArmPostion[0], diverArmPostion[1], diverArmPostion[2]);
       gRotate(diverArmRotation[2], 0, 0, 1);
       gRotate(-diverArmRotation[0], 1, 0, 0);
       gTranslate(0, -0.6, 0);
@@ -947,6 +1267,230 @@ function renderDock() {
     gScale(6.0, 0.3, 3.0);
     drawCube();
     toggleTextureBlending();
+  }
+  gPop();
+}
+
+function scene3(timestamp) {
+  toggleTint(0);
+  gPush();
+  {
+    // Set the origin at the location of the stones
+    gTranslate(stonePosition[0], stonePosition[1], stonePosition[2]);
+    renderDiver();
+    if (diverPosition[1] > groundPosition[1] + 1.5) {
+      diverPosition[1] -= dt * 2;
+      diverRotation[2] += dt * 15;
+    }
+    if (timestamp < 51000 - testOffset) {
+      for (i = 0; i < 4; i++) {
+        if (timestamp > spawnDelay[i - 1] + 600 || i == 0) {
+          spawnDelay[i] = timestamp;
+          spawnBubbles(Math.floor(Math.random() * 3) + 4, i, timestamp);
+        }
+      }
+    }
+
+    gPush();
+    {
+      // Draw the rocks!
+      setColor(vec4(0.4, 0.4, 0.6, 1.0));
+      gScale(0.6, 0.6, 0.6);
+      drawSphere();
+      gPush();
+      {
+        gTranslate(stone2Position[0], stone2Position[1], stone2Position[2]);
+        //Smaller Rock
+        gPush();
+        {
+          gScale(0.5, 0.5, 0.5);
+          drawSphere();
+        }
+        gPop();
+      }
+      gPop();
+    }
+    gPop();
+
+    // Fish
+    gPush();
+    {
+      gTranslate(
+        s3fishStartPosition[0],
+        s3fishStartPosition[1],
+        s3fishStartPosition[2]
+      );
+      // Fish  Movement
+      // Rotates around 0, 0, 0 while swimming up and down in a sin wave
+      renderFish(timestamp);
+    }
+    gPop();
+
+    // Seaweed
+    renderSeaweedStrand(
+      rightSeaweedPosition[0],
+      rightSeaweedPosition[1],
+      rightSeaweedPosition[2],
+      timestamp
+    );
+    renderSeaweedStrand(
+      middleSeaweedPosition[0],
+      middleSeaweedPosition[1],
+      middleSeaweedPosition[2],
+      timestamp
+    );
+    renderSeaweedStrand(
+      leftSeaweedPosition[0],
+      leftSeaweedPosition[1],
+      leftSeaweedPosition[2],
+      timestamp
+    );
+
+    // Ground Box
+    gPush();
+    {
+      gTranslate(groundPosition[0], groundPosition[1], groundPosition[2]);
+      gPush();
+      {
+        // setColor(vec4(1.0, 0.8, 0.6, 1.0));
+        setColor(vec4(0.1, 0.1, 0.1, 1.0));
+        gScale(6, 1, 1);
+        drawCube();
+      }
+      gPop();
+    }
+    gPop();
+  }
+  gPop();
+}
+
+function renderFish(timestamp) {
+  gPush();
+  {
+    setColor(vec4(0.4, 0.4, 0.6, 1.0));
+    fishPosition[1] = Math.sin(0.001 * timestamp); // Up and down movement
+    gTranslate(s3fishPosition[0], s3fishPosition[1], s3fishPosition[2]);
+    // Rotation around seaweed at distance of 1
+    fishRotation[1] = fishRotation[1] + 60 * dt;
+    gRotate(fishRotation[1], 0, 1, 0);
+    gTranslate(-s3fishPosition[0], s3fishPosition[2], s3fishPosition[2]);
+
+    gPush();
+    {
+      gScale(0.5, 0.5, 0.5);
+      drawCone();
+    }
+    gPop();
+    //Fish Body -> Child of Head CS
+    gPush();
+    {
+      setColor(fishBodyColour);
+      gTranslate(fishBodyPosition[0], fishBodyPosition[1], fishBodyPosition[2]);
+      gRotate(180, 0, 1, 0);
+      gScale(0.5, 0.5, 2);
+      drawCone();
+    }
+    gPop();
+
+    gPush();
+    {
+      //Fish Tail Top fin
+      gPush();
+      {
+        gTranslate(tailPosition[0], tailPosition[1], tailPosition[2] - 0.1333);
+        gRotate(220, 1, 0, 0);
+        tailRotation[1] = 15 * Math.sin(timestamp / 100); // Doesn't work
+        gRotate(tailRotation[1], 0, 1, 0);
+        gScale(0.12, 0.12, 0.7);
+        drawCone();
+      }
+      gPop();
+
+      // Fish tail bottom fin
+      gPush();
+      {
+        gTranslate(tailPosition[0], -tailPosition[1], tailPosition[2]);
+        gRotate(125, 1, 0, 0);
+        tailRotation[1] = 15 * Math.sin(timestamp / 100); // Doesn't work
+        gRotate(tailRotation[1], 0, 1, 0);
+        gScale(0.1, 0.1, 0.5);
+        drawCone();
+      }
+      gPop();
+    }
+    gPop();
+    //Fish Eyes
+    gPush();
+    {
+      setColor(vec4(1.0, 1.0, 1.0));
+
+      // Right Eye
+      gPush();
+      {
+        gTranslate(fishEyePosition[0], fishEyePosition[1], fishEyePosition[2]);
+        gScale(0.1, 0.1, 0.1);
+        drawSphere();
+        gPush();
+        {
+          setColor(vec4(0.0, 0.0, 0.0));
+          gScale(0.8, 0.8, 1.2);
+          drawSphere();
+        }
+        gPop();
+      }
+      gPop();
+      setColor(vec4(1.0, 1.0, 1.0));
+      //Left Eye
+      gPush();
+      {
+        gTranslate(-fishEyePosition[0], fishEyePosition[1], fishEyePosition[2]);
+        gScale(0.1, 0.1, 0.1);
+        drawSphere();
+        gPush();
+        {
+          setColor(vec4(0.0, 0.0, 0.0));
+          gScale(0.8, 0.8, 1.2);
+          drawSphere();
+        }
+        gPop();
+      }
+      gPop();
+    }
+    gPop();
+  }
+  gPop();
+}
+
+function renderSeaweedStrand(i, j, k, timestamp) {
+  gPush();
+  {
+    setColor(seaweedColour);
+    gTranslate(i, j, k);
+    // 2.5 degrees * sin(timstamp) -> Translated down the entire kinetic chain equals a sway from -25 to 25 degrees
+    seaweedRotation[2] = -2.5 * Math.sin(timestamp / 1000);
+    gRotate(seaweedRotation[2], 0, 0, 1);
+    gPush();
+    {
+      gScale(0.15, 0.3, 0.15);
+      drawSphere();
+    }
+    gPop();
+
+    for (i = 0; i < 9; i++) {
+      gPush();
+      //Sine pattern in the seaweed
+      strandRotation[2] = 15 * Math.sin(timestamp / 1000 + i);
+      gRotate(strandRotation[2], 0, 0, 1);
+      // Rotate from Base
+      gTranslate(0, 0.55, 0);
+      gPush();
+      {
+        gScale(0.15, 0.3, 0.15);
+        drawSphere();
+      }
+      gPop();
+    }
+    gPopN(9);
   }
   gPop();
 }
