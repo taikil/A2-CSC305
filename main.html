@@ -39,8 +39,11 @@
             uniform float shininess;
             uniform int blendTextures;
             uniform int tint;
+            uniform int grayScale;
             uniform sampler2D texture1;
             uniform sampler2D texture2;
+            uniform sampler2D texture3;
+
 
 
             in vec3 fPos;
@@ -53,7 +56,7 @@
               vec3 L = normalize(lpos - pos);
               vec3 V = -pos;
               vec3 H = normalize(L + V);
-              vec3 R = reflect(-L, N) ;
+              //vec3 R = reflect(-L, N) ;
 
               // Compute terms in the illumination equation
               float lightDotNormal = max(dot(L, N), 0.0);
@@ -67,20 +70,27 @@
               if (dot(L, N) < 0.0) {
                 specular = vec4(0.0, 0.0, 0.0, 1.0);
               }
-              if( blendTextures == 1) {
-                vec4 alphaTextureColor = texture( texture2, fTexCoord );
-                vec4 color = mix(texture( texture1, fTexCoord ), alphaTextureColor, alphaTextureColor.a);
-                return color;
-              } else if (tint == 1){
-                  vec4 color = ambientProduct + diffuse + specular;
+              //Compute Color
+              vec4 color = ambientProduct + diffuse + specular;
+              color.a = 1.0;
+              //Add Red tint to color
+              if (tint == 1){
                   color.r += 0.5;
-                  color.a = 1.0;
-                  return color;
-              } else {
-                vec4 color = ambientProduct + diffuse + specular;
-                color.a = 1.0;
-                return color;
+                  //Create Grayscale
+              } else if (grayScale ==1){
+                  // Calculate the average of the red, green, and blue components
+                  float grayscaleValue = (color.r + color.g + color.b) / 3.0;
+                  // Create a grayscale color
+                  vec4 grayscaleColor = vec4(grayscaleValue, grayscaleValue, grayscaleValue, color.a);
+                  color = grayscaleColor;
+              } 
+                if( blendTextures == 1) {
+                  vec4 alphaTextureColor = texture( texture2, fTexCoord );
+                  vec4 texColor = mix(texture( texture1, fTexCoord ), alphaTextureColor, alphaTextureColor.a);
+                  color = texColor;
+                
               }
+              return color;
 
 
             }

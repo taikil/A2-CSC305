@@ -12,8 +12,6 @@ var ytop = 6.0;
 var bottom = -6.0;
 
 var lightPosition = vec4(100.0, 100.0, 100.0, 1.0);
-// var lightPosition2 = vec4(0.0, -100.0, 0.0, 1.0);
-var lightPosition2 = vec4(0.0, 0.0, 0.0, 1.0);
 
 var lightAmbient = vec4(0.2, 0.2, 0.2, 1.0);
 var lightDiffuse = vec4(1.0, 1.0, 1.0, 1.0);
@@ -48,7 +46,8 @@ var controller;
 // In animation it is often useful to think of an object as having some DOF
 // Then the animation is simply evolving those DOF over time.
 var currentScene = 1;
-var testOffset = 16000;
+var testOffset = 0;
+var fpsTimer = 0;
 
 //Scene 1
 var currentRotation = [0, 0, 0];
@@ -70,7 +69,7 @@ var diverRotation = [0, 0, 0];
 var diverPosition = [1, 1, 0];
 // var diverPosition = [5, 7, 0];
 var diverHeadPosition = [0, 1.15, 0];
-var diverArmPostion = [0.55, 0.6, 0];
+var diverArmPostion = [0.55, 0.3, 0];
 var diverThighPosition = [0.3, -1, 0];
 var diverLegCompression = [30, 0, 0];
 var cloud1Position = [-1, 4.8, -15];
@@ -126,6 +125,7 @@ var rightSeaweedPosition = [0.6, 0.2, 0];
 
 var blendTextures = 0;
 var tint = 0;
+var grayScale = 0;
 
 // For this example we are going to store a few different textures here
 var textureArray = [];
@@ -242,37 +242,6 @@ function handleTextureLoaded(textureObj) {
 
   textureObj.isTextureReady = true;
 }
-//Jellyfish Texture
-// const textureWidth = 128;
-// const textureHeight = 128;
-
-// // Create a data array for the texture
-// const data = new Array();
-// for (var i = 0; i < textureWidth; i++) data[i] = new Array();
-
-// for (let y = 0; y < textureHeight; y++) {
-//   for (let x = 0; x < textureWidth; x++) {
-//     data[y][x] = new Float32Array(4);
-//   }
-// }
-
-// // Generate the gradient from cyan to white
-// for (let y = 0; y < textureHeight; y++) {
-//   for (let x = 0; x < textureWidth; x++) {
-//     const index = (y * textureWidth + x) * 3;
-//     const gradientValue = x / textureWidth; // Value between 0 and 1 for gradient
-//     data[index] = 0; // Red component (0)
-//     data[index + 1] = 255 * gradientValue; // Green component (cyan to white gradient)
-//     data[index + 2] = 255; // Blue component (255)
-//   }
-// }
-
-// var imageGradient = new Uint8Array(4 * textureHeight * textureWidth);
-
-// for (var i = 0; i < textureHeight; i++)
-//   for (var j = 0; j < textureWidth; j++)
-//     for (var k = 0; k < 4; k++)
-//       imageGradient[4 * textureWidth * i + 4 * j + k] = 255 * data[i][j][k];
 
 // Takes an array of textures and calls render if the textures are created/loaded
 // This is useful if you have a bunch of textures, to ensure that those files are
@@ -387,6 +356,11 @@ function toggleTextureBlending() {
 function toggleTint(val) {
   tint = val;
   gl.uniform1i(gl.getUniformLocation(program, "tint"), tint);
+}
+
+function toggleGrayScale(val) {
+  grayScale = val;
+  gl.uniform1i(gl.getUniformLocation(program, "grayScale"), grayScale);
 }
 
 window.onload = function init() {
@@ -580,7 +554,11 @@ function render(timestamp) {
   // We've modified the object.js to add in support for this attribute array!
   gPush();
   {
-    console.log("Timestamp: ", timestamp);
+    if (timestamp > fpsTimer) {
+      fpsTimer += 2000;
+      console.log("FPS:", 1 / dt);
+    }
+    // console.log("Timestamp: ", timestamp);
     if (timestamp < 16000 - testOffset) {
       // if (timestamp > 160000) {
       scene1();
@@ -614,18 +592,18 @@ function render(timestamp) {
       i % 2 == 0 ? (sign = 1) : (sign = -1);
       renderFishes(i, sign);
     }
-    // if (timestamp > 18000) {
-    renderDiver();
-    animateSwimming(timestamp);
-    // Bubbles
-    // Random number between 3 and 6
-    for (i = 0; i < 4; i++) {
-      if (timestamp > spawnDelay[i - 1] + 600 || i == 0) {
-        spawnDelay[i] = timestamp;
-        spawnBubbles(Math.floor(Math.random() * 3) + 4, i, timestamp);
+    if (timestamp > 18000) {
+      renderDiver();
+      animateSwimming(timestamp);
+      // Bubbles
+      // Random number between 3 and 6
+      for (i = 0; i < 4; i++) {
+        if (timestamp > spawnDelay[i - 1] + 600 || i == 0) {
+          spawnDelay[i] = timestamp;
+          spawnBubbles(Math.floor(Math.random() * 3) + 4, i, timestamp);
+        }
       }
     }
-    // }
     renderJellyFish(timestamp);
     if (timestamp > 30000 - testOffset) {
       renderShark(timestamp);
@@ -686,13 +664,6 @@ function render(timestamp) {
       cloud4Position[1],
       -cloud4Position[2]
     );
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, textureArray[2].textureWebGL);
-    gl.uniform1i(gl.getUniformLocation(program, "texture3"), 1);
-
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, textureArray[2].textureWebGL);
-    gl.uniform1i(gl.getUniformLocation(program, "texture3"), 2);
 
     renderDock();
     if (timestamp > 3000 && timestamp < 8000) {
@@ -710,7 +681,6 @@ function sharkBite(timestamp) {
   if (sharkPosition[0] + 3 >= diverPosition[0] + diverMovement[0]) {
     toggleTint(1);
     diverArmPostion[0] += 7 * dt;
-    // diverArmRotation = [0, 0, 0];
     diverMovement = [0, 0, 0];
     if (diverRotation[2] < 180) {
       diverRotation[2] += dt * 15;
@@ -818,8 +788,8 @@ function renderJellyFish(timestamp) {
       jellyFishPosition[2]
     );
 
-    jellyFishPosition[0] += 0.006 * (Math.sin(timestamp / 500) + 1);
-    jellyFishPosition[1] += 0.01 * (Math.sin(timestamp / 500) + 1);
+    jellyFishPosition[0] += 0.009 * (Math.sin(timestamp / 500) + 1);
+    jellyFishPosition[1] += 0.015 * (Math.sin(timestamp / 500) + 1);
     gRotate(180, 1, 0, 0);
     gRotate(30, 0, 0, 1);
     gPush();
@@ -949,11 +919,20 @@ function spawnBubbles(dif, i, timestamp) {
 
     setColor(vec4(0.99, 0.99, 0.99, 0.8));
     bubbleMovement[i][1] = bubbleMovement[i][1] + dt; // Upwards Movement
-    gTranslate(
-      bubblePosition[i][0],
-      bubblePosition[i][1],
-      bubblePosition[i][2]
-    );
+    //Account for diver being horizontar
+    if (currentScene == 3) {
+      gTranslate(
+        bubblePosition[i][0] - 1,
+        bubblePosition[i][1] - 1,
+        bubblePosition[i][2]
+      );
+    } else {
+      gTranslate(
+        bubblePosition[i][0],
+        bubblePosition[i][1],
+        bubblePosition[i][2]
+      );
+    }
     gTranslate(0, bubbleMovement[i][1], 0);
     gTranslate(0, 0, 0.5);
     gScale(0.1, 0.1, 0.1);
@@ -964,7 +943,7 @@ function spawnBubbles(dif, i, timestamp) {
 
 function nextScene(scene, eye) {
   diverPosition = [5, 8, 0];
-  currentScene == scene;
+  currentScene = scene;
   if (scene == 2) {
     if (eye[1] > -15) {
       eye[1] -= dt * 4;
@@ -1180,17 +1159,27 @@ function renderDiverArms(isLeft) {
       gTranslate(diverArmPostion[0], diverArmPostion[1], diverArmPostion[2]);
       gRotate(diverArmRotation[2], 0, 0, 1);
       gRotate(-diverArmRotation[0], 1, 0, 0);
-      gTranslate(0, -0.6, 0);
     } else {
-      gTranslate(-0.55, 0.0, 0);
-      gTranslate(0, 0.6, 0);
+      gTranslate(-0.55, 0.3, 0);
       gRotate(-diverArmRotation[2], 0, 0, 1);
       gRotate(-diverArmRotation[0], 1, 0, 0);
-      gTranslate(0, -0.6, 0);
+      // gTranslate(0, -0.6, 0);
     }
     gPush();
     {
-      gScale(0.1, 0.6, 0.2);
+      // gScale(0.1, 0.6, 0.2);
+      gScale(0.1, 0.3, 0.2);
+      drawCube();
+    }
+    gPop();
+    gPush();
+    {
+      gTranslate(0.0, -0.5, 0.0);
+      if (currentScene > 1) {
+        gTranslate(0, 0, 0.03);
+        gRotate(-15, 1, 0, 0);
+      }
+      gScale(0.1, 0.3, 0.2);
       drawCube();
     }
     gPop();
@@ -1251,6 +1240,10 @@ function renderDiverLeg(isLeft) {
 }
 
 function renderDock() {
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, textureArray[2].textureWebGL);
+  gl.uniform1i(gl.getUniformLocation(program, "texture3"), 3);
+
   gPush();
   {
     toggleTextureBlending();
@@ -1277,7 +1270,13 @@ function scene3(timestamp) {
   {
     // Set the origin at the location of the stones
     gTranslate(stonePosition[0], stonePosition[1], stonePosition[2]);
-    renderDiver();
+    if (timestamp > 51000) {
+      toggleGrayScale(1);
+      renderDiver();
+      toggleGrayScale(0);
+    } else {
+      renderDiver();
+    }
     if (diverPosition[1] > groundPosition[1] + 1.5) {
       diverPosition[1] -= dt * 2;
       diverRotation[2] += dt * 15;
