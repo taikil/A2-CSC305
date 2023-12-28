@@ -1,3 +1,5 @@
+# A short WebGL Animation
+
 [4 Marks] At least one hierarchical object of at least two-levels in the hierarchy  (e.g. human arm body -> shoulder -> elbow -> wrist...).
     Complete, multiple examples but best example is probably the jellyfish in the renderJellyFish Function in main.js defined at line 775
 
